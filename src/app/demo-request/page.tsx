@@ -1,16 +1,17 @@
 'use client';
 
-import { useUser, useClerk } from "@clerk/nextjs";
+import { useUser } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, ArrowRight, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export default function DemoRequestPage() {
   const { user, isLoaded: isUserLoaded } = useUser();
-  const { signOut } = useClerk();
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     if (isUserLoaded) {
@@ -18,11 +19,9 @@ export default function DemoRequestPage() {
     }
   }, [isUserLoaded]);
 
-  const handleSignOut = () => {
-    signOut(() => {
-      // Use direct window location for a hard redirect after sign out
-      window.location.href = "/";
-    });
+  // Function to handle return to homepage
+  const handleReturnHome = () => {
+    router.push('/');
   };
 
   if (loading) {
@@ -40,7 +39,7 @@ export default function DemoRequestPage() {
         <Button 
           variant="outline" 
           className="flex items-center gap-2 text-slate-600"
-          onClick={handleSignOut}
+          onClick={handleReturnHome}
         >
           <ArrowLeft className="h-4 w-4" /> 
           Return to Homepage

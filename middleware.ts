@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getAuth } from '@clerk/nextjs/server';
+import { getAuth, clerkClient } from '@clerk/nextjs/server';
 import type { NextRequest } from 'next/server';
 
 // Define public routes that don't require authentication
@@ -33,10 +33,28 @@ export async function middleware(request: NextRequest) {
     path.startsWith(publicPath)
   );
   
+  // Default to check active organization first
+  let hasOrganization = !!orgId;
+  
+  // If no active organization but user is authenticated, check user metadata
+  if (userId && !orgId) {
+    try {
+      // Access clerkClient directly without calling it as a function
+      const user = await clerkClient.users.getUser(userId);
+      
+      // Check metadata for organization membership flag
+      // This is set by our webhook when users join organizations
+      const metadata = user.publicMetadata || {};
+      hasOrganization = metadata.hasOrganization === true;
+    } catch (error) {
+      console.error('Error checking user organization metadata:', error);
+    }
+  }
+  
   // If it's the root path ("/") and user is authenticated
   if (path === "/" && userId) {
-    // If user has an org, redirect to dashboard
-    if (orgId) {
+    // If user has an org (active or from metadata), redirect to dashboard
+    if (hasOrganization) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
     // If user has no org, redirect to demo request
@@ -52,8 +70,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(signInUrl);
   }
   
-  // If authenticated but no active organization and trying to access protected route
-  if (userId && !orgId && !isPublicPath && path !== '/demo-request') {
+  // If authenticated but no organization and trying to access protected route
+  if (userId && !hasOrganization && !isPublicPath && path !== '/demo-request') {
     return NextResponse.redirect(new URL('/demo-request', request.url));
   }
   
